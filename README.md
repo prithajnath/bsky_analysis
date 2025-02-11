@@ -16,9 +16,5 @@ Grabs user profiles and writes them to a CSV. You can run the script for as long
 
 ## Useful endpoints
 
-- Grab profiles based on a term
-
-  https://docs.bsky.app/docs/api/app-bsky-actor-get-profiles
-
-- Grab followers of a user
-  https://docs.bsky.app/docs/api/app-bsky-graph-get-followers
+- Grab profiles based on a term https://docs.bsky.app/docs/api/app-bsky-actor-search-actors
+- Grab followers of a user https://docs.bsky.app/docs/api/app-bsky-graph-get-followers

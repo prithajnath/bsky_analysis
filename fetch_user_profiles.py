@@ -20,7 +20,7 @@ LIMIT = 100
 users = {"handle": [], "bio": [], "created_at": []}
 
 
-# https://docs.bsky.app/docs/api/app-bsky-actor-get-profiles
+# https://docs.bsky.app/docs/api/app-bsky-actor-search-actors
 def fetch_user_profiles():
     cursor = None
     params = {"limit": 100, "q": "a"}
