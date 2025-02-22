@@ -6,25 +6,14 @@ Script for Bluesky ETL. Will need Airflow or some kind of orchestrator to run sc
 
 You can run these scripts for as long as you want and press Ctrl-C and it will save the users to a CSV file
 
-### fetch_user_profiles.py
+### fetch_random_users.py
 
-Usage
-
-```py
-python fetch_user_profiles.py
-```
-
-Grabs user profiles and writes them to a CSV.
-
-### fetch_user_posts_and_reposts.py
-
-Usage
+Grabs users for every letter of the alphabet and saves them to a CSV
 
 ```py
-python fetch_user_posts_and_reposts.py -hdl defnull.bsky.social
-```
+python -m fetch_random_users.py -l 100 -b 1
 
-Grabs posts and re-posts for a given users.
+```
 
 ## Useful endpoints
 
