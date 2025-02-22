@@ -11,7 +11,7 @@ You can run these scripts for as long as you want and press Ctrl-C and it will s
 Grabs users for every letter of the alphabet and saves them to a CSV
 
 ```py
-python -m fetch_random_users.py -l 100 -b 1
+python -m fetch_random_users.py -l 10 -b 100
 
 ```
 
