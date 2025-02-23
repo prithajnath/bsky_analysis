@@ -1,9 +1,11 @@
 """
-python -m fetch_random_users.py -l 100 -b 1000
+python fetch_random_users.py -l 100 -b 1000
 """
 
 from bsky import Actor
+from network import RetryException
 import argparse
+
 import signal
 
 
@@ -20,5 +22,12 @@ if __name__ == "__main__":
 
     actor_api = Actor(batch_size=batch_size, limit=limit)
 
-    signal.signal(signal.SIGINT, actor_api.flush)
-    actor_api.get_user_profiles()
+    signal.signal(signal.SIGINT, actor_api.signal_cleanup)
+
+    try:
+        actor_api.get_user_profiles()
+    except Exception as e:
+        print(f"Caught some exception, flushing buffer {len(actor_api.actors)}")
+        actor_api.cleanup()
+
+        raise e

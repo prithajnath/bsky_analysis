@@ -10,6 +10,7 @@ atproto = "*"
 pandas = "*"
 numpy = "*"
 scikit-learn = "*"
+duckdb = "*"
 
 [dev-packages]
 ipykernel = "*"
