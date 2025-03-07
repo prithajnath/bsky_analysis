@@ -3,3 +3,4 @@
 file.db
 __pycache__
 .idea
+*.ipynb
