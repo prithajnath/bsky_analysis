@@ -14,10 +14,10 @@ from network import retry
 
 USERNAME = os.getenv("BSKY_USERNAME")
 APP_PASSWORD = os.getenv("BSKY_APP_PASSWORD")
-#USERNAME = os.getenv("shawne.leene@gmail.com")
-#APP_PASSWORD = os.getenv("rav42015$")
 print(f"USERNAME: {USERNAME}")
-print(f"APP_PASSWORD: {'*' * len(APP_PASSWORD) if APP_PASSWORD else 'None'}")  # Mask the password for security
+print(
+    f"APP_PASSWORD: {'*' * len(APP_PASSWORD) if APP_PASSWORD else 'None'}"
+)  # Mask the password for security
 
 client = Client()
 client.login(USERNAME, APP_PASSWORD)
@@ -119,7 +119,6 @@ class Actor(BlueskyFetch):
 
         with duckdb.connect(self.dbfilename) as conn:
             df = pd.DataFrame(self.actors)
-            # df.to_csv(f"users_{datetime.now()}.csv", index=False)
 
             if df.shape[0] > 0:
                 print(f"Writing {df.shape[0]} new records to the database.")
@@ -162,7 +161,9 @@ class Actor(BlueskyFetch):
             print(f"Fetching users with letter {letter} with limit {self.limit}")
 
             # Keep fetching until we reach 10,000 users
-            while len(self.actors) < self.batch_size:  # Keep fetching until we reach 10,000 users
+            while (
+                len(self.actors) < self.batch_size
+            ):  # Keep fetching until we reach 10,000 users
                 # How many more do we need?
                 remaining_needed = self.batch_size - len(self.actors)
 
@@ -191,7 +192,9 @@ class Actor(BlueskyFetch):
                 for actor in users_to_add:
                     self.add_actor(actor, letter)
 
-                print(f"Collected {len(self.actors)} users for {letter} (Added: {len(users_to_add)})")
+                print(
+                    f"Collected {len(self.actors)} users for {letter} (Added: {len(users_to_add)})"
+                )
 
                 # If we reach the batch size, flush and continue fetching
                 if len(self.actors) >= self.batch_size:
