@@ -1,3 +1,5 @@
 .env
 #*.csv
 file.db
+__pycache__
+.idea
