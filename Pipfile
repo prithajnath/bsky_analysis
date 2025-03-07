@@ -11,6 +11,9 @@ pandas = "*"
 numpy = "*"
 scikit-learn = "*"
 duckdb = "*"
+openpyxl = "*"
+matplotlib = "*"
+seaborn = "*"
 
 [dev-packages]
 ipykernel = "*"
