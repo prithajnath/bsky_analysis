@@ -1,9 +1,8 @@
 """
-python fetch_random_users.py -l 100 -b 1000
+python fetch_user_followers.py -u rmayemsinger.bsky.social
 """
 
 from bsky import ActorFollower
-from network import RetryException
 import argparse
 
 import signal
@@ -13,12 +12,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-h", "--handle", required=True)
+    parser.add_argument("-u", "--user", required=True)
     parser.add_argument("-b", "--batch_size", type=int)
     parser.add_argument("-l", "--limit", type=int)
     args = parser.parse_args()
 
-    handle = args.handle
+    handle = args.user
     batch_size = args.batch_size or 1000
     limit = args.limit or 100
 
