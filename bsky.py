@@ -52,9 +52,26 @@ class BlueskyFetch:
                 """
             )
 
+            conn.execute(
+                """
+                    CREATE TABLE IF NOT EXISTS user_followers
+                    (
+                        user varchar(100),
+                        follower_did varchar(100),                   
+                        follower_handle varchar(100),
+                        follower_bio text,
+                        follower_created_at timestamptz
+                    );
+                """
+            )
+
     @property
     def api(self):
         return self._client.app.bsky
+
+    def signal_cleanup(self, a, b):
+        self.cleanup()
+        sys.exit()
 
     def save_progress(self):
         pass
@@ -136,10 +153,6 @@ class Actor(BlueskyFetch):
         self.save_progress()
         self.flush_actors()
 
-    def signal_cleanup(self, a, b):
-        self.cleanup()
-        sys.exit()
-
     @network_exception_retry
     def get_user_profiles(self, letter=None):
         if self.cursor:
@@ -216,6 +229,99 @@ class Actor(BlueskyFetch):
         self.save_progress()
 
 
-if __name__ == "__main__":
-    actor_api = Actor(limit=100, batch_size=10000)
-    actor_api.get_user_profiles()
+class ActorFollower(BlueskyFetch):
+    def __init__(self, handle, limit, batch_size):
+        self.handle = handle
+        self.followers = []
+        self.limit = limit
+        self.batch_size = batch_size
+        self.cursor = None
+        super().__init__()
+
+        with duckdb.connect(self.dbfilename) as conn:
+            conn.execute(
+                """
+                    CREATE TABLE IF NOT EXISTS users_followers_progress
+                    (
+                        fetched_at timestamptz,
+                        cursor varchar(200),
+                        user text                 
+                    );
+                """
+            )
+
+            result = conn.execute(
+                f"""
+                with cte1 as (
+                    select
+                         *,
+                         row_number() over (order by fetched_at desc) as r
+                    from 
+                         users_followers_progress
+                    where user = '{self.handle}'         
+                ) select cursor, user from cte1 where r = 1;
+            """
+            ).fetchone()
+
+            if result:
+                latest_cursor, latest_letter = result
+                self.cursor = latest_cursor
+                self.letter = latest_letter
+
+    def add_follower(self, follower):
+        self.followers.append(
+            {
+                "user": self.handle,
+                "follower_did": follower.did,
+                "follower_handle": follower.handle,
+                "follower_bio": follower.description,
+                "follower_created_at": follower.created_at,
+            }
+        )
+
+        if len(self.followers) >= self.batch_size:
+            self.flush_followers()
+
+    def flush_followers(self):
+        with duckdb.connect(self.dbfilename) as conn:
+            df = pd.DataFrame(self.followers)
+
+            if df.shape[0] > 0:
+                print(f"Writing {df.shape[0]} new records to the database.")
+                conn.execute("INSERT INTO user_followers SELECT * FROM df")
+        self.followers = []
+
+    def save_progress(self):
+        with duckdb.connect(self.dbfilename) as conn:
+            conn.execute(
+                "INSERT INTO users_followers_progress(fetched_at, cursor, user) VALUES (?, ?, ?)",
+                (datetime.now(), self.cursor, self.handle),
+            )
+
+    @network_exception_retry
+    def get_followers(self):
+        params = {"actor": self.handle, "limit": self.limit}
+
+        while True:
+            if self.cursor:
+                params["cursor"] = self.cursor
+
+            response = self.api.graph.get_followers(params=params)
+
+            for follower in response.followers:
+                self.add_follower(follower=follower)
+
+            if response.cursor:
+                self.cursor = response.cursor
+            else:
+                break
+
+        if self.followers:
+            self.flush_followers()
+
+        self.cursor = "FINISHED"
+        self.save_progress()
+
+    def cleanup(self):
+        self.save_progress()
+        self.flush_followers()
