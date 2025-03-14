@@ -15,10 +15,7 @@ from network import retry
 
 USERNAME = os.getenv("BSKY_USERNAME")
 APP_PASSWORD = os.getenv("BSKY_APP_PASSWORD")
-print(f"USERNAME: {USERNAME}")
-print(
-    f"APP_PASSWORD: {'*' * len(APP_PASSWORD) if APP_PASSWORD else 'None'}"
-)  # Mask the password for security
+DB_FILENAME = "file.db"
 
 client = Client()
 client.login(USERNAME, APP_PASSWORD)
@@ -35,7 +32,7 @@ class BlueskyFetch:
         self.password = os.getenv("BSKY_APP_PASSWORD")
         self._client = Client()
         self._client.login(self.username, self.password)
-        self.dbfilename = "file.db"
+        self.dbfilename = DB_FILENAME
         self.cursor = None
 
         # Init db with tables
@@ -366,5 +363,10 @@ class Actor_Posts(BlueskyFetch):
 
 
 if __name__ == "__main__":
-    posts_api = Actor_Posts(did="did:plc:y5xyloyy7s4a2bwfeimj7r3b", limit=100, batch_size=1000)
-    posts_api.get_user_posts()
+    print(f"USERNAME: {USERNAME}")
+    print(
+        f"APP_PASSWORD: {'*' * len(APP_PASSWORD) if APP_PASSWORD else 'None'}"
+    )  # Mask the password for security
+
+    actor_api = Actor(limit=100, batch_size=10000)
+    actor_api.get_user_profiles()
