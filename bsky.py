@@ -52,6 +52,7 @@ class BlueskyFetch:
                     (
                         author_did varchar(100),
                         uri varchar(100),
+                        cid varchar(100),
                         created_at timestamptz,
                         body text,
                         reply_uri varchar(100),
@@ -224,9 +225,11 @@ class Actor(BlueskyFetch):
         self.save_progress()
 
 class Actor_Posts(BlueskyFetch):
+    MAX_POSTS = 1000
     def __init__(self, did, limit=1000, batch_size=1000):
         self.limit = limit
         self.batch_size = batch_size
+        self.total_fetched = 0
         self.did = did
         self.posts = []
         super().__init__()
@@ -279,21 +282,31 @@ class Actor_Posts(BlueskyFetch):
         new_post = {
             "author_did": self.did, # author DID
             "uri": post.uri, # uniform resource identifier
-            "created": post.record.created_at, # UTC timestamp
+            "cid": post.cid, # content identifier
+            "created_at": post.record.created_at, # UTC timestamp
             "text": post.record.text, # text contents of post | TODO: process this and obfuscate it
-            "reply_uri": "None" if post.record.reply is None else post.record.reply.parent.uri,
+            # "reply_cid": "None" if post.record.reply is None else post.record.reply.parent.cid,
         }
 
-        if post.embed is not None and post.embed.py_type=="app.bsky.embed.record#view":
-            new_post["quote_uri"] = post.embed.record.uri
-        else:
-            new_post["quote_uri"] = "None"
+        try:
+            new_post["reply_cid"] = post.record.reply.parent.cid
+        except:
+            new_post["reply_cid"] = "None"
+        
+        try:
+            new_post["quote_cid"] = post.embed.record.cid
+        except:
+            new_post["quote_cid"] = "None"
 
         self.posts.append(new_post)
 
+        # If we reach the batch size, flush and continue fetching
+        if len(self.posts) >= self.batch_size:
+            print(f"Flushing batch of {len(self.posts)} posts for user {self.did} ({self.total_fetched} total)")
+            self.flush_posts()
+
     def flush_posts(self):
         # backend
-
         with duckdb.connect(self.dbfilename) as conn:
             df = pd.DataFrame(self.posts)
 
@@ -322,7 +335,7 @@ class Actor_Posts(BlueskyFetch):
             if self.cursor == "FINISHED":
                 return
         while (
-            len(self.posts) < self.batch_size
+            self.total_fetched < Actor_Posts.MAX_POSTS
         ):
             print(f"posts:{len(self.posts)} | batch_size:{self.batch_size}")
             remaining_needed = self.batch_size - len(self.posts)
@@ -348,29 +361,18 @@ class Actor_Posts(BlueskyFetch):
             posts_to_add = response.feed[:needed_posts]  # Slice to prevent excess
 
             for feed_view_post in posts_to_add:
+                self.total_fetched+=1
                 self.add_post(feed_view_post.post)
 
             print(
                 f"Collected {len(self.posts)} posts for {self.did} (Added: {len(posts_to_add)})"
             )
 
-            # If we reach the batch size, flush and continue fetching
-            if len(self.posts) >= self.batch_size:
-                print(f"Flushing batch for user {self.did}: {len(self.posts)}")
-                # collected_posts+=len(self.posts)
-                self.flush_posts()
-                # Clear batch after writing
-                self.posts = []
-
-                # Stop fetching since we hit batch_size
-                break
-
         # Final flush for remaining posts of the user
         if self.posts:
             print(f"Flushing final batch for user {self.did}: {len(self.posts)}")
             # collected_posts+=len(self.posts)
             self.flush_posts()
-            self.posts = []  # Clear batch after writing
 
         self.cursor = "FINISHED"
         self.save_progress()

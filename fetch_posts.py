@@ -6,6 +6,7 @@ import duckdb
 from bsky import Actor, Actor_Posts
 from network import RetryException
 import argparse
+import pandas as pd
 
 import signal
 
@@ -21,12 +22,18 @@ if __name__ == "__main__":
     batch_size = args.batch_size or 1000
     limit = args.limit or 100
 
-dummy_did = "did:plc:y5xyloyy7s4a2bwfeimj7r3b"
-dids = [dummy_did]
+    # users_df = pd.read_csv("sample_users.csv")
+    # print(users_df.shape)
+    # dids = users_df['did']
+
+    # test DIDs
+    # mcuban.bsky.social did:plc:y5xyloyy7s4a2bwfeimj7r3b
+    # bodegacats.bsky.social: did:plc:qhfo22pezo44fa3243z2h4ny
+    dummy_did = "did:plc:y5xyloyy7s4a2bwfeimj7r3b"
+    dids = [dummy_did]
 
     for did in dids:
-        print(did)
-        feed_api = Actor_Posts(did=did, limit=limit, batch_size=batch_size)
+        feed_api = Actor_Posts(did=did, limit=10, batch_size=100)
 
         try:
             feed_api.get_user_posts()
