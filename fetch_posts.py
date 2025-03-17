@@ -21,23 +21,12 @@ if __name__ == "__main__":
     batch_size = args.batch_size or 1000
     limit = args.limit or 100
 
-    dbfilename = "file.db"
-    dids = None
-    with duckdb.connect(dbfilename) as conn:
-        result = conn.execute(
-            """
-            select distinct did from users;
-        """
-        ).fetchall()
-        
-        if result:
-            dids = result
-
-    dummy_did = "did:plc:y5xyloyy7s4a2bwfeimj7r3b"
+dummy_did = "did:plc:y5xyloyy7s4a2bwfeimj7r3b"
+dids = [dummy_did]
 
     for did in dids:
-        print(did[0])
-        feed_api = Actor_Posts(did=did[0], limit=limit, batch_size=batch_size)
+        print(did)
+        feed_api = Actor_Posts(did=did, limit=limit, batch_size=batch_size)
 
         try:
             feed_api.get_user_posts()

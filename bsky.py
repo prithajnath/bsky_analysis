@@ -243,7 +243,21 @@ class Actor_Posts(BlueskyFetch):
                     );
                 """
             )
+            result = conn.execute(
+                f"""
+                with cte1 as (
+                    select
+                         *,
+                         row_number() over (partition by did order by fetched_at desc) as r
+                    from 
+                         posts_progress
+                ) select cursor from cte1 where r = 1 and did='{self.did}';
+            """
+            ).fetchone()
 
+            if result:
+                latest_cursor = result[0]
+                self.cursor = latest_cursor
             # result = conn.execute(
             #     """
             #     with cte1 as (
