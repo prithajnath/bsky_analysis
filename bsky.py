@@ -1,15 +1,13 @@
-from atproto import Client
-from atproto_client.exceptions import ModelError, NetworkError, InvokeTimeoutError
-import atproto_client.models.app.bsky.feed.defs as defs
-from datetime import datetime
-from time import sleep
 import os
-import pandas as pd
-import json
-import sys
-import signal
 import string
+import sys
+from datetime import datetime
+
+import atproto_client.models.app.bsky.feed.defs as defs
 import duckdb
+import pandas as pd
+from atproto import Client
+from atproto_client.exceptions import InvokeTimeoutError, ModelError, NetworkError
 
 from network import retry
 
@@ -224,8 +222,10 @@ class Actor(BlueskyFetch):
         self.cursor = "FINISHED"
         self.save_progress()
 
+
 class Actor_Posts(BlueskyFetch):
     MAX_POSTS = 1000
+
     def __init__(self, did, limit=1000, batch_size=1000):
         self.limit = limit
         self.batch_size = batch_size
@@ -267,7 +267,7 @@ class Actor_Posts(BlueskyFetch):
             #         select
             #              *,
             #              row_number() over (order by fetched_at desc) as r
-            #         from 
+            #         from
             #              posts_progress
             #     ) select cursor, did from cte1 where r = 1;
             # """
@@ -280,11 +280,11 @@ class Actor_Posts(BlueskyFetch):
 
     def add_post(self, post: defs.PostView):
         new_post = {
-            "author_did": self.did, # author DID
-            "uri": post.uri, # uniform resource identifier
-            "cid": post.cid, # content identifier
-            "created_at": post.record.created_at, # UTC timestamp
-            "text": post.record.text, # text contents of post | TODO: process this and obfuscate it
+            "author_did": self.did,  # author DID
+            "uri": post.uri,  # uniform resource identifier
+            "cid": post.cid,  # content identifier
+            "created_at": post.record.created_at,  # UTC timestamp
+            "text": post.record.text,  # text contents of post | TODO: process this and obfuscate it
             # "reply_cid": "None" if post.record.reply is None else post.record.reply.parent.cid,
         }
 
@@ -292,7 +292,7 @@ class Actor_Posts(BlueskyFetch):
             new_post["reply_cid"] = post.record.reply.parent.cid
         except:
             new_post["reply_cid"] = "None"
-        
+
         try:
             new_post["quote_cid"] = post.embed.record.cid
         except:
@@ -302,7 +302,9 @@ class Actor_Posts(BlueskyFetch):
 
         # If we reach the batch size, flush and continue fetching
         if len(self.posts) >= self.batch_size:
-            print(f"Flushing batch of {len(self.posts)} posts for user {self.did} ({self.total_fetched} total)")
+            print(
+                f"Flushing batch of {len(self.posts)} posts for user {self.did} ({self.total_fetched} total)"
+            )
             self.flush_posts()
 
     def flush_posts(self):
@@ -334,38 +336,32 @@ class Actor_Posts(BlueskyFetch):
         if self.cursor:
             if self.cursor == "FINISHED":
                 return
-        while (
-            self.total_fetched < Actor_Posts.MAX_POSTS
-        ):
+        while self.total_fetched < Actor_Posts.MAX_POSTS:
             print(f"posts:{len(self.posts)} | batch_size:{self.batch_size}")
-            remaining_needed = self.batch_size - len(self.posts)
-            #  adjust the limit so we never exceed batch_size
-            adjusted_limit = min(self.limit, remaining_needed)
-
-            params = {"limit": adjusted_limit, "actor": self.did}
+            params = {"limit": self.limit, "actor": self.did}
             print(f"self cursor:{self.cursor}")
             if self.cursor:
                 params["cursor"] = self.cursor
 
             response = self.api.feed.get_author_feed(params=params)
-            
+
             if not response or not response.feed:
                 print(f"No more posts found for {self.did}")
                 # Stop fetching if there are no more posts
 
             # Store the next cursor for pagination
-            self.cursor = response.cursor if response.cursor else None
+            if response.cursor:
+                self.cursor = response.cursor
+            else:
+                print(f"No more posts found for {self.did}")
+                break
 
-            # Add only the exact number of posts needed to complete batch
-            needed_posts = remaining_needed
-            posts_to_add = response.feed[:needed_posts]  # Slice to prevent excess
-
-            for feed_view_post in posts_to_add:
-                self.total_fetched+=1
+            for feed_view_post in response.feed:
+                self.total_fetched += 1
                 self.add_post(feed_view_post.post)
 
             print(
-                f"Collected {len(self.posts)} posts for {self.did} (Added: {len(posts_to_add)})"
+                f"Collected {len(self.posts)} posts for {self.did} (Added: {len(response.feed)})"
             )
 
         # Final flush for remaining posts of the user
