@@ -32,10 +32,10 @@ if __name__ == "__main__":
     users_df = pd.read_csv("sample_users.csv")
     if iloc:
         s, e = [int(i) for i in iloc.split(":")]
-        print(f"Slicing users df {s}:{e}")
+        logger.info(f"Slicing users df {s}:{e}")
         users_df = users_df.iloc[s:e]
 
-    print(users_df)
+    logger.info(users_df)
     dids = users_df["did"]
 
     # test DIDs
