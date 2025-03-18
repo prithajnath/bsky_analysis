@@ -1,12 +1,12 @@
 """
-python fetch_posts.py -b 1000 -i 10:1000
+python fetch_posts.py -b 1000 -i 10:1000 -m 100_000
 """
 
 import argparse
 import signal
 
 import pandas as pd
-
+from create_logger import logger
 from bsky import Actor_Posts
 
 if __name__ == "__main__":
@@ -15,12 +15,19 @@ if __name__ == "__main__":
 
     parser.add_argument("-b", "--batch_size", type=int)
     parser.add_argument("-l", "--limit", type=int)
+    parser.add_argument("-m", "--max_posts", type=int)
     parser.add_argument("-i", "--iloc")
+    parser.add_argument("-lv", "--log-level", type=str, default="INFO")
+
     args = parser.parse_args()
 
     batch_size = args.batch_size or 1000
     limit = args.limit or 100
+    max_posts = args.max_posts or 1000
     iloc = args.iloc
+    log_level = args.log_level
+
+    logger.setLevel(log_level)
 
     users_df = pd.read_csv("sample_users.csv")
     if iloc:
@@ -38,7 +45,7 @@ if __name__ == "__main__":
     # dids = [dummy_did]
 
     for did in dids:
-        feed_api = Actor_Posts(did=did, limit=10, batch_size=100)
+        feed_api = Actor_Posts(did=did, limit=10, batch_size=100, max_posts=max_posts)
 
         signal.signal(signal.SIGINT, feed_api.signal_cleanup)
         try:

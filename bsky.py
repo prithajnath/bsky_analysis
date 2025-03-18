@@ -8,7 +8,7 @@ import duckdb
 import pandas as pd
 from atproto import Client
 from atproto_client.exceptions import InvokeTimeoutError, ModelError, NetworkError
-
+from create_logger import logger
 from network import retry
 
 USERNAME = os.getenv("BSKY_USERNAME")
@@ -128,7 +128,7 @@ class Actor(BlueskyFetch):
             df = pd.DataFrame(self.actors)
 
             if df.shape[0] > 0:
-                print(f"Writing {df.shape[0]} new records to the database.")
+                logger.debug(f"Writing {df.shape[0]} new records to the database.")
                 conn.execute("INSERT INTO users SELECT * FROM df")
         self.actors = []
 
@@ -158,14 +158,14 @@ class Actor(BlueskyFetch):
         # Resume from last fetched letter if applicable
         if self.letter:
             idx = alphabet.index(self.letter)
-            print(f"🔄 Resuming from letter {self.letter}")
+            logger.debug(f"🔄 Resuming from letter {self.letter}")
             alphabet = alphabet[idx:]
 
         for letter in alphabet:
             self.letter = letter
             self.actors = []  # Reset list for each letter
             self.cursor = None
-            print(f"Fetching users with letter {letter} with limit {self.limit}")
+            logger.debug(f"Fetching users with letter {letter} with limit {self.limit}")
 
             # Keep fetching until we reach 10,000 users
             while (
@@ -181,11 +181,13 @@ class Actor(BlueskyFetch):
                 if self.cursor:
                     params["cursor"] = self.cursor
 
-                print(f"Fetching next batch for {letter} (Limit: {adjusted_limit})...")
+                logger.debug(
+                    f"Fetching next batch for {letter} (Limit: {adjusted_limit})..."
+                )
                 response = self.api.actor.search_actors(params=params)
 
                 if not response or not response.actors:
-                    print(f"No more users found for {letter}")
+                    logger.debug(f"No more users found for {letter}")
                     # Stop fetching if there are no more users
                     break
 
@@ -199,13 +201,15 @@ class Actor(BlueskyFetch):
                 for actor in users_to_add:
                     self.add_actor(actor, letter)
 
-                print(
+                logger.debug(
                     f"Collected {len(self.actors)} users for {letter} (Added: {len(users_to_add)})"
                 )
 
                 # If we reach the batch size, flush and continue fetching
                 if len(self.actors) >= self.batch_size:
-                    print(f"Flushing batch for letter {letter}: {len(self.actors)}")
+                    logger.debug(
+                        f"Flushing batch for letter {letter}: {len(self.actors)}"
+                    )
                     self.flush_actors()
                     # Clear batch after writing
                     self.actors = []
@@ -215,7 +219,9 @@ class Actor(BlueskyFetch):
 
             # Final flush for remaining users of the letter
             if self.actors:
-                print(f"Flushing final batch for letter {letter}: {len(self.actors)}")
+                logger.debug(
+                    f"Flushing final batch for letter {letter}: {len(self.actors)}"
+                )
                 self.flush_actors()
                 self.actors = []  # Clear batch after writing
 
@@ -226,12 +232,13 @@ class Actor(BlueskyFetch):
 class Actor_Posts(BlueskyFetch):
     MAX_POSTS = 1000
 
-    def __init__(self, did, limit=1000, batch_size=1000):
+    def __init__(self, did, limit=1000, batch_size=1000, max_posts=None):
         self.limit = limit
         self.batch_size = batch_size
         self.total_fetched = 0
         self.did = did
         self.posts = []
+        self.max_posts = max_posts or self.MAX_POSTS
         super().__init__()
 
         # check for existing cursor
@@ -261,22 +268,6 @@ class Actor_Posts(BlueskyFetch):
             if result:
                 latest_cursor = result[0]
                 self.cursor = latest_cursor
-            # result = conn.execute(
-            #     """
-            #     with cte1 as (
-            #         select
-            #              *,
-            #              row_number() over (order by fetched_at desc) as r
-            #         from
-            #              posts_progress
-            #     ) select cursor, did from cte1 where r = 1;
-            # """
-            # ).fetchone()
-
-            # if result:
-            #     latest_cursor, latest_did = result
-            #     self.cursor = latest_cursor
-            #     self.did = latest_did
 
     def add_post(self, post: defs.PostView):
         new_post = {
@@ -302,7 +293,7 @@ class Actor_Posts(BlueskyFetch):
 
         # If we reach the batch size, flush and continue fetching
         if len(self.posts) >= self.batch_size:
-            print(
+            logger.debug(
                 f"Flushing batch of {len(self.posts)} posts for user {self.did} ({self.total_fetched} total)"
             )
             self.flush_posts()
@@ -313,7 +304,7 @@ class Actor_Posts(BlueskyFetch):
             df = pd.DataFrame(self.posts)
 
             if df.shape[0] > 0:
-                print(f"Writing {df.shape[0]} new records to the database.")
+                logger.debug(f"Writing {df.shape[0]} new records to the database.")
                 conn.execute("INSERT INTO posts SELECT * FROM df")
         self.posts = []
 
@@ -336,49 +327,40 @@ class Actor_Posts(BlueskyFetch):
         if self.cursor:
             if self.cursor == "FINISHED":
                 return
-        while self.total_fetched < Actor_Posts.MAX_POSTS:
-            print(f"posts:{len(self.posts)} | batch_size:{self.batch_size}")
+        while self.total_fetched < self.max_posts:
+            logger.debug(f"posts:{len(self.posts)} | batch_size:{self.batch_size}")
             params = {"limit": self.limit, "actor": self.did}
-            print(f"self cursor:{self.cursor}")
+            logger.debug(f"self cursor:{self.cursor}")
             if self.cursor:
                 params["cursor"] = self.cursor
 
             response = self.api.feed.get_author_feed(params=params)
 
             if not response or not response.feed:
-                print(f"No more posts found for {self.did}")
+                logger.debug(f"No more posts found for {self.did}")
                 # Stop fetching if there are no more posts
 
             # Store the next cursor for pagination
             if response.cursor:
                 self.cursor = response.cursor
             else:
-                print(f"No more posts found for {self.did}")
+                logger.debug(f"No more posts found for {self.did}")
                 break
 
             for feed_view_post in response.feed:
                 self.total_fetched += 1
                 self.add_post(feed_view_post.post)
 
-            print(
+            logger.debug(
                 f"Collected {len(self.posts)} posts for {self.did} (Added: {len(response.feed)})"
             )
 
         # Final flush for remaining posts of the user
         if self.posts:
-            print(f"Flushing final batch for user {self.did}: {len(self.posts)}")
-            # collected_posts+=len(self.posts)
+            logger.debug(f"Flushing final batch for user {self.did}: {len(self.posts)}")
             self.flush_posts()
+
+        logger.info(f"Collected {self.total_fetched} posts for {self.did}")
 
         self.cursor = "FINISHED"
         self.save_progress()
-
-
-if __name__ == "__main__":
-    print(f"USERNAME: {USERNAME}")
-    print(
-        f"APP_PASSWORD: {'*' * len(APP_PASSWORD) if APP_PASSWORD else 'None'}"
-    )  # Mask the password for security
-
-    actor_api = Actor(limit=100, batch_size=10000)
-    actor_api.get_user_profiles()
