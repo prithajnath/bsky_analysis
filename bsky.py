@@ -323,6 +323,7 @@ class Actor_Posts(BlueskyFetch):
         self.cleanup()
         sys.exit()
 
+    @network_exception_retry
     def get_user_posts(self):
         if self.cursor:
             if self.cursor == "FINISHED":
