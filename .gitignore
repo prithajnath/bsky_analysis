@@ -1,6 +1,7 @@
 .env
 #*.csv
 file.db
+file.db.wal
 __pycache__
 .idea
 *.ipynb

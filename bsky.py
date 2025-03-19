@@ -9,27 +9,27 @@ import pandas as pd
 from atproto import Client
 from atproto_client.exceptions import InvokeTimeoutError, ModelError, NetworkError
 from create_logger import logger
+from functools import cached_property
 from network import retry
 
 USERNAME = os.getenv("BSKY_USERNAME")
 APP_PASSWORD = os.getenv("BSKY_APP_PASSWORD")
 DB_FILENAME = "file.db"
 
-client = Client()
-client.login(USERNAME, APP_PASSWORD)
-
 network_exception_retry = retry(
     exceptions=(ConnectionError, ModelError, NetworkError, InvokeTimeoutError),
     max_retries=12,
 )
 
+bsky_client = Client()
+bsky_client.login(os.getenv("BSKY_USERNAME"), os.getenv("BSKY_APP_PASSWORD"))
+
 
 class BlueskyFetch:
+
+    BSKY_CLIENT = bsky_client
+
     def __init__(self):
-        self.username = os.getenv("BSKY_USERNAME")
-        self.password = os.getenv("BSKY_APP_PASSWORD")
-        self._client = Client()
-        self._client.login(self.username, self.password)
         self.dbfilename = DB_FILENAME
         self.cursor = None
 
@@ -58,6 +58,10 @@ class BlueskyFetch:
                     )
                 """
             )
+
+    @cached_property
+    def _client(self):
+        return self.BSKY_CLIENT
 
     @property
     def api(self):

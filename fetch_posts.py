@@ -8,6 +8,8 @@ import signal
 import pandas as pd
 from create_logger import logger
 from bsky import Actor_Posts
+from time import sleep
+from atproto_client.exceptions import BadRequestError
 
 if __name__ == "__main__":
 
@@ -51,6 +53,11 @@ if __name__ == "__main__":
         try:
             feed_api.get_user_posts()
         except Exception as e:
+            if e.__class__ == BadRequestError:
+                logger.error(f"Found a bad did {did}. Skipping!")
+                sleep(5)
+                continue
+
             print(f"Caught some exception, flushing buffer {len(feed_api.posts)}")
             feed_api.cleanup()
 
