@@ -9,6 +9,7 @@ import os
 from bsky import DB_FILENAME
 from tempfile import NamedTemporaryFile
 from create_logger import logger
+from tqdm import tqdm
 
 
 S3_BUCKET = "bsky-analysis-files"
@@ -35,7 +36,22 @@ def dump_table_to_s3(tablename, filename):
         )
 
         logger.info(f"Uploading {tmpfile_name} to s3://{S3_BUCKET}/{filename}.parquet")
-        s3.upload_file(Filename=tmpfile_name, Bucket=S3_BUCKET, Key=filename)
+        progress_bar = tqdm(
+            total=os.path.getsize(tmpfile_name),
+            unit="B",
+            unit_scale=True,
+            desc="Uploading",
+        )
+
+        def upload_progress(chunk):
+            progress_bar.update(chunk)
+
+        s3.upload_file(
+            Filename=tmpfile_name,
+            Bucket=S3_BUCKET,
+            Key=filename,
+            Callback=upload_progress,
+        )
         logger.info(f"Successfully uploaded parquet to s3://{S3_BUCKET}/{filename}")
 
 

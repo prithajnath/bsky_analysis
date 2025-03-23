@@ -15,6 +15,7 @@ openpyxl = "*"
 matplotlib = "*"
 seaborn = "*"
 boto3 = "*"
+tqdm = "*"
 
 [dev-packages]
 ipykernel = "*"
