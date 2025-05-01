@@ -137,6 +137,17 @@ models = {
 }
 print(y.value_counts(normalize=True))
 
+
+# Collect metrics
+metrics = {
+    'Model': [],
+    'Accuracy': [],
+    'Precision': [],
+    'Recall': [],
+    'F1 Score': []
+}
+
+
 # train, predict, evaluate
 for name, model in models.items():
     print(f"\n🔍 {name}")
@@ -149,9 +160,9 @@ for name, model in models.items():
 
     # evaluate
     print("Accuracy:", accuracy_score(y_val, y_pred))
-    print("Precision:", precision_score(y_val, y_pred, average='binary'))
-    print("Recall:", recall_score(y_val, y_pred, average='binary'))
-    print("F1 Score:", f1_score(y_val, y_pred, average='binary'))
+    print("Precision:", precision_score(y_val, y_pred, average='binary', zero_division=0))
+    print("Recall:", recall_score(y_val, y_pred, average='binary', zero_division=0))
+    print("F1 Score:", f1_score(y_val, y_pred, average='binary', zero_division=0))
 
     # full classification report
     print("\nClassification Report:")
@@ -167,24 +178,11 @@ for name, model in models.items():
     plt.show()
 
 
-# Collect metrics
-metrics = {
-    'Model': [],
-    'Accuracy': [],
-    'Precision': [],
-    'Recall': [],
-    'F1 Score': []
-}
-
-for name, model in models.items():
-    model.fit(X_train_scaled, y_train)
-    y_pred = model.predict(X_val_scaled)
-
     metrics['Model'].append(name)
     metrics['Accuracy'].append(accuracy_score(y_val, y_pred))
-    metrics['Precision'].append(precision_score(y_val, y_pred, average='binary'))
-    metrics['Recall'].append(recall_score(y_val, y_pred, average='binary'))
-    metrics['F1 Score'].append(f1_score(y_val, y_pred, average='binary'))
+    metrics['Precision'].append(precision_score(y_val, y_pred, average='binary', zero_division=0))
+    metrics['Recall'].append(recall_score(y_val, y_pred, average='binary', zero_division=0))
+    metrics['F1 Score'].append(f1_score(y_val, y_pred, average='binary', zero_division=0))
 
 # convert to dataframe
 metrics_df = pd.DataFrame(metrics)
