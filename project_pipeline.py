@@ -192,6 +192,8 @@ metrics = {
     'F1 Score': []
 }
 
+# Initialize feature importance data
+feature_data = {}
 
 # train, predict, evaluate
 for name, model in models.items():
@@ -213,6 +215,22 @@ for name, model in models.items():
     print("\nClassification Report:")
     print(classification_report(y_val, y_pred))
 
+    # Feature importance (if available)
+    try:
+        # Tree-based models
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+        # Linear models
+        elif hasattr(model, "coef_"):
+            importances = model.coef_[0]
+        else:
+            continue  # skip if no importance measure
+
+        feature_data[name] = importances
+
+    except Exception as e:
+        print(f"Skipping {name}: {e}")
+
     # confusion matrix
     cm = confusion_matrix(y_val, y_pred)
     plt.figure(figsize=(5, 4))
@@ -231,6 +249,17 @@ for name, model in models.items():
 
 # convert to dataframe
 metrics_df = pd.DataFrame(metrics)
+
+
+# convert feature importances to dataFrame
+feature_df = pd.DataFrame(feature_data, index=X.columns)
+
+# sort columns
+feature_df = feature_df.sort_index()
+
+# export
+feature_df.to_csv("model_feature_importances.csv")
+print("Exported to model_feature_importances.csv")
 
 # plot
 ax = metrics_df.set_index('Model').plot(kind='bar', figsize=(12, 6))
