@@ -11,6 +11,7 @@ os.environ['CPPFLAGS'] = '-I/opt/homebrew/opt/libomp/include'
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.ensemble import VotingClassifier
@@ -57,27 +58,66 @@ sample_weights = compute_sample_weight(class_weight='balanced', y=y_train)
 # These versions automatically adjusts the importance of each class based on their frequency in the training data.
 
 # logistic regression
-log_reg = LogisticRegression(max_iter=1000)
-log_reg_bal = LogisticRegression(max_iter=1000, class_weight='balanced')
+log_reg = LogisticRegression(
+    max_iter=1000
+)
+
+log_reg_bal = LogisticRegression(
+    max_iter=1000,
+    class_weight='balanced'
+)
+
+log_reg_lasso = LogisticRegression(
+    max_iter=1000,
+    class_weight='balanced',
+    penalty='l1', # L1
+    solver='liblinear')
 
 # svc
-svc = SVC(probability=True)
-svc_bal = SVC(probability=True, class_weight='balanced')
+svc = SVC(
+    probability=True
+)
+
+svc_bal = SVC(
+    probability=True,
+    class_weight='balanced'
+)
+
+
+svc_lasso = LinearSVC(
+    penalty='l1', # lasso
+    dual=False,
+    class_weight='balanced',
+    max_iter=10000)
 
 # random forest
 rf = RandomForestClassifier()
-rf_bal = RandomForestClassifier(class_weight='balanced')
+rf_bal = RandomForestClassifier(
+    class_weight='balanced'
+)
 
 # xgboost
-xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
-xgb_bal = XGBClassifier(use_label_encoder=False, eval_metric='logloss', scale_pos_weight=scale)
+xgb = XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='aucpr'
+)
+xgb_bal = XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='aucpr',
+    scale_pos_weight=scale)
+xgb_lasso = XGBClassifier(
+    use_label_encoder=False,
+    eval_metric='aucpr',
+    scale_pos_weight=scale,
+    reg_alpha=1.0  # Lasso
+)
 
 # iterative xgboost
 xgb_iter = XGBClassifier(
     use_label_encoder=False,
     eval_metric='logloss',
     scale_pos_weight=scale,
-    n_estimators=100
+    n_estimators=500
 )
 xgb_iter.fit(
     X_train_scaled, y_train,
@@ -96,15 +136,17 @@ hgb_bal.fit(X_train_scaled, y_train, sample_weight=sample_weights)
 ensemble = VotingClassifier(
     estimators=[
         ('lr', log_reg),
-        ('svm', svc),
-        ('rf', rf),
-        ('xgb', xgb),
-        ('hgb', hgb),
         ('lr_bal', log_reg_bal),
-        ('svm_bal', svc_bal),
+        ('lr_lasso', log_reg_lasso),
+        ('svc', svc),
+        ('svc_bal', svc_bal),
+        ('rf', rf),
         ('rf_bal', rf_bal),
+        ('xgb', xgb),
         ('xgb_bal', xgb_bal),
+        ('xgb_lasso', xgb_lasso),
         ('xgb_iter', xgb_iter),
+        ('hgb', hgb),
         ('hgb_bal', hgb_bal),
     ],
     voting='soft' # soft uses predict_proba - hard uses voting
@@ -122,15 +164,18 @@ hgb_and_logistic_bal = VotingClassifier(
 # define classifiers
 models = {
     "Logistic Regression": log_reg,
-    "SVM": svc,
-    "Random Forest": rf,
-    "XGBoost": xgb,
-    "HGB Gradient Boosting Classifier": hgb,
     "Logistic Regression (Balanced)": log_reg_bal,
-    "SVM (Balanced)": svc_bal,
+    "Logistic Regression (Lasso)": log_reg_lasso,
+    "SVC": svc,
+    "SVC (Balanced)": svc_bal,
+    "SVC (Lasso)": svc_lasso,
+    "Random Forest": rf,
     "Random Forest (Balanced)": rf_bal,
+    "XGBoost": xgb,
     "XGBoost (Balanced)": xgb_bal,
+    "XGBoost (Lasso)": xgb_lasso,
     "XGBoost with Iterations": xgb_iter,
+    "HGB Gradient Boosting Classifier": hgb,
     "HGB Classifier (Balanced)": hgb_bal,
     "Ensemble (Voting Classifier)": ensemble,
     "HGB and Logistic(Bal) Ensemble": hgb_and_logistic_bal
