@@ -16,6 +16,8 @@ matplotlib = "*"
 seaborn = "*"
 boto3 = "*"
 tqdm = "*"
+xgboost = "*"
+imblearn = "*"
 
 [dev-packages]
 ipykernel = "*"
