@@ -15,8 +15,10 @@ with open("url_regex.txt", "r") as f:
     URL_REGEX = f.read()
 
 
-user_labels_df = pd.read_csv("kmeans_cluster_labels.csv")
-users_df = pd.read_csv("sample_users.csv").rename(columns={"did": "author_did"})
+user_labels_df = pd.read_csv("datasets/kmeans_cluster_labels.csv")
+users_df = pd.read_csv("datasets/sample_users.csv").rename(
+    columns={"did": "author_did"}
+)
 
 
 with duckdb.connect("file.db") as conn:
