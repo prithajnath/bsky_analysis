@@ -2,7 +2,7 @@
 
 Script for Bluesky ETL and classifier models.
 
-# Dependencis
+# Dependencies
 
 This project maintains a `Pipfile` for dependency management. You can install all required dependencies with the following command
 
